@@ -120,7 +120,7 @@ jobs:
       if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
       run: |
         echo "Exporting data to CSV..."
-        python export_data.py --format csv --output latest_snow_data.csv --latest
+        python export_data.py --csv --output latest_snow_data.csv
       continue-on-error: true
 
     - name: Show statistics

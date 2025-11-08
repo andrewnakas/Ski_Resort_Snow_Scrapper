@@ -28,7 +28,7 @@ NORTHERN_HEMISPHERE_RESORTS = [
         "summit_elevation_m": 3813,
         "vertical_drop_m": 1362,
         "website_url": "https://www.aspensnowmass.com",
-        "snow_report_url": "https://www.aspensnowmass.com/our-mountains/snowmass/snow-report"
+        "snow_report_url": "https://www.aspensnowmass.com/four-mountains/snow-report"
     },
     {
         "name": "Breckenridge",
@@ -166,7 +166,7 @@ NORTHERN_HEMISPHERE_RESORTS = [
         "summit_elevation_m": 3185,
         "vertical_drop_m": 1261,
         "website_url": "https://www.jacksonhole.com",
-        "snow_report_url": "https://www.jacksonhole.com/snow-report"
+        "snow_report_url": "https://www.jacksonhole.com/mountain-report"
     },
 
     # Vermont
