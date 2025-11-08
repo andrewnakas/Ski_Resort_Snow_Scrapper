@@ -65,18 +65,18 @@ jobs:
 
     - name: Initialize database
       run: |
-        echo "Initializing database..."
-        python collect_data.py --init
+        echo "Initializing database with resort coordinates..."
+        python collect_gribstream.py --init
 
     - name: Scrape snow data
       if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
       run: |
         echo "=========================================="
-        echo "Starting snow data collection"
+        echo "Fetching snow forecasts from GribStream API"
         echo "=========================================="
 
-        # Build the command based on inputs
-        CMD="python collect_data.py --collect"
+        # Build the command
+        CMD="python collect_gribstream.py --collect"
 
         # Add countries filter if specified
         if [ -n "${{ github.event.inputs.countries }}" ]; then
@@ -84,16 +84,13 @@ jobs:
           CMD="$CMD --countries ${{ github.event.inputs.countries }}"
         fi
 
-        # Add resorts filter if specified
-        if [ -n "${{ github.event.inputs.resorts }}" ]; then
-          echo "Filtering by resorts: ${{ github.event.inputs.resorts }}"
-          IFS=',' read -ra RESORTS <<< "${{ github.event.inputs.resorts }}"
-          for resort in "${RESORTS[@]}"; do
-            CMD="$CMD --resorts \"$resort\""
-          done
+        # Add limit for test mode
+        if [ "${{ github.event.inputs.test_mode }}" == "true" ]; then
+          echo "Test mode: limiting to 10 resorts"
+          CMD="$CMD --limit 10"
         fi
 
-        # Execute the scraping command
+        # Execute the collection command
         echo "Executing: $CMD"
         eval $CMD
       continue-on-error: true
@@ -102,9 +99,9 @@ jobs:
       if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
       run: |
         echo "=========================================="
-        echo "Latest Snow Data"
+        echo "Latest Snow Forecasts"
         echo "=========================================="
-        python collect_data.py --show
+        python collect_gribstream.py --show
       continue-on-error: true
 
     - name: Generate powder report
@@ -146,17 +143,14 @@ jobs:
       continue-on-error: true
 
     - name: Setup Pages
-      if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
       uses: actions/configure-pages@v4
 
     - name: Upload Pages artifact
-      if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
       uses: actions/upload-pages-artifact@v3
       with:
         path: '.'
 
     - name: Deploy to GitHub Pages
-      if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
       id: deployment
       uses: actions/deploy-pages@v4
 
