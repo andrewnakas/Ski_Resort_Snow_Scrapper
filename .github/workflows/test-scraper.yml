@@ -31,6 +31,11 @@ on:
   # schedule:
   #   - cron: '0 7 * * *'
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -133,6 +138,27 @@ jobs:
         echo "Data collection dates:"
         sqlite3 ski_resorts.db "SELECT DISTINCT date FROM snow_data ORDER BY date DESC LIMIT 5"
       continue-on-error: true
+
+    - name: Generate HTML dashboard
+      run: |
+        echo "Generating HTML dashboard for GitHub Pages..."
+        python generate_html.py
+      continue-on-error: true
+
+    - name: Setup Pages
+      if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
+      uses: actions/configure-pages@v4
+
+    - name: Upload Pages artifact
+      if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: '.'
+
+    - name: Deploy to GitHub Pages
+      if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
+      id: deployment
+      uses: actions/deploy-pages@v4
 
     - name: Upload database artifact
       if: always()
