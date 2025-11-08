@@ -65,18 +65,18 @@ jobs:
 
     - name: Initialize database
       run: |
-        echo "Initializing database with 105+ resorts..."
-        python collect_onthesnow.py --init
+        echo "Initializing database with resort coordinates..."
+        python collect_gribstream.py --init
 
     - name: Scrape snow data
       if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
       run: |
         echo "=========================================="
-        echo "Starting snow data collection from OnTheSnow"
+        echo "Fetching snow forecasts from GribStream API"
         echo "=========================================="
 
         # Build the command
-        CMD="python collect_onthesnow.py --collect"
+        CMD="python collect_gribstream.py --collect"
 
         # Add countries filter if specified
         if [ -n "${{ github.event.inputs.countries }}" ]; then
@@ -90,7 +90,7 @@ jobs:
           CMD="$CMD --limit 10"
         fi
 
-        # Execute the scraping command
+        # Execute the collection command
         echo "Executing: $CMD"
         eval $CMD
       continue-on-error: true
@@ -99,9 +99,9 @@ jobs:
       if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
       run: |
         echo "=========================================="
-        echo "Latest Snow Data"
+        echo "Latest Snow Forecasts"
         echo "=========================================="
-        python collect_onthesnow.py --show
+        python collect_gribstream.py --show
       continue-on-error: true
 
     - name: Generate powder report
