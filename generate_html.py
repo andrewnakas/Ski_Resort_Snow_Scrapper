@@ -12,6 +12,8 @@ import os
 class HTMLGenerator:
     def __init__(self, db_path: str = 'ski_resorts.db'):
         self.db_path = db_path
+        if not os.path.exists(db_path):
+            raise FileNotFoundError(f"Database file not found: {db_path}")
         self.conn = sqlite3.connect(db_path)
         self.conn.row_factory = sqlite3.Row
 
@@ -530,17 +532,95 @@ class HTMLGenerator:
         self.conn.close()
 
 
+def create_placeholder_page():
+    """Create a placeholder page when no data is available."""
+    html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ski Resort Snow Report - Coming Soon</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 60px 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+        }
+        p {
+            font-size: 1.2em;
+            line-height: 1.6;
+            opacity: 0.9;
+        }
+        .emoji {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+        a {
+            color: #fff;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="emoji">❄️ 🎿</div>
+        <h1>Snow Dashboard Coming Soon!</h1>
+        <p>The ski resort snow scraper is being set up.</p>
+        <p>To populate this dashboard, run the workflow manually from the Actions tab and select some resorts to scrape.</p>
+        <p style="margin-top: 30px;">
+            <a href="https://github.com/andrewnakas/Ski_Resort_Snow_Scrapper" target="_blank">View Project on GitHub</a>
+        </p>
+    </div>
+</body>
+</html>
+"""
+    with open('index.html', 'w', encoding='utf-8') as f:
+        f.write(html)
+    print("✓ Created placeholder page")
+
+
 def main():
     """Main function."""
     print("Generating HTML dashboard...")
 
-    generator = HTMLGenerator()
-    generator.generate_html()
-    generator.close()
+    try:
+        generator = HTMLGenerator()
+        generator.generate_html()
+        generator.close()
 
-    print("✓ HTML dashboard generated successfully!")
-    print("  Open index.html in your browser to view locally")
+        print("✓ HTML dashboard generated successfully!")
+        print("  Open index.html in your browser to view locally")
+    except FileNotFoundError as e:
+        print(f"⚠ Warning: {e}")
+        print("  Database not found. Creating placeholder page...")
+        create_placeholder_page()
+        return 0
+    except Exception as e:
+        print(f"⚠ Warning: {e}")
+        print("  No data available yet. Creating placeholder page...")
+        create_placeholder_page()
+        return 0
 
 
 if __name__ == '__main__':
-    main()
+    import sys
+    sys.exit(main() or 0)
