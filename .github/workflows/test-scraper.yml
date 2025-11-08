@@ -1,0 +1,160 @@
+name: Test Snow Scraper
+
+on:
+  # Run on push to any branch
+  push:
+    branches: [ "**" ]
+
+  # Run on pull requests
+  pull_request:
+    branches: [ "**" ]
+
+  # Allow manual triggering with options
+  workflow_dispatch:
+    inputs:
+      countries:
+        description: 'Countries to scrape (space-separated, e.g., "USA Canada")'
+        required: false
+        default: ''
+      resorts:
+        description: 'Specific resorts to scrape (comma-separated, e.g., "Vail,Whistler Blackcomb")'
+        required: false
+        default: ''
+      test_mode:
+        description: 'Test mode (scrape only 5 resorts for quick testing)'
+        required: false
+        type: boolean
+        default: true
+
+  # Optional: Schedule daily runs at 7 AM UTC
+  # Uncomment the following lines to enable scheduled runs
+  # schedule:
+  #   - cron: '0 7 * * *'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run test suite
+      run: |
+        echo "=========================================="
+        echo "Running comprehensive test suite"
+        echo "=========================================="
+        python test_scraper.py
+      continue-on-error: true
+
+    - name: Initialize database
+      run: |
+        echo "Initializing database..."
+        python collect_data.py --init
+
+    - name: Scrape snow data
+      if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
+      run: |
+        echo "=========================================="
+        echo "Starting snow data collection"
+        echo "=========================================="
+
+        # Build the command based on inputs
+        CMD="python collect_data.py --collect"
+
+        # Add countries filter if specified
+        if [ -n "${{ github.event.inputs.countries }}" ]; then
+          echo "Filtering by countries: ${{ github.event.inputs.countries }}"
+          CMD="$CMD --countries ${{ github.event.inputs.countries }}"
+        fi
+
+        # Add resorts filter if specified
+        if [ -n "${{ github.event.inputs.resorts }}" ]; then
+          echo "Filtering by resorts: ${{ github.event.inputs.resorts }}"
+          IFS=',' read -ra RESORTS <<< "${{ github.event.inputs.resorts }}"
+          for resort in "${RESORTS[@]}"; do
+            CMD="$CMD --resorts \"$resort\""
+          done
+        fi
+
+        # Execute the scraping command
+        echo "Executing: $CMD"
+        eval $CMD
+      continue-on-error: true
+
+    - name: Display collected data
+      if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
+      run: |
+        echo "=========================================="
+        echo "Latest Snow Data"
+        echo "=========================================="
+        python collect_data.py --show
+      continue-on-error: true
+
+    - name: Generate powder report
+      if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
+      run: |
+        echo "=========================================="
+        echo "Top Powder Resorts (24h snowfall)"
+        echo "=========================================="
+        sqlite3 ski_resorts.db "SELECT r.name, r.country, s.new_snow_24h_cm, s.snow_depth_base_cm FROM snow_data s JOIN resorts r ON s.resort_id = r.id WHERE s.date = date('now') AND s.new_snow_24h_cm IS NOT NULL ORDER BY s.new_snow_24h_cm DESC LIMIT 10" || echo "No data available yet"
+      continue-on-error: true
+
+    - name: Export data to CSV
+      if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
+      run: |
+        echo "Exporting data to CSV..."
+        python export_data.py --format csv --output latest_snow_data.csv --latest
+      continue-on-error: true
+
+    - name: Show statistics
+      if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
+      run: |
+        echo "=========================================="
+        echo "Database Statistics"
+        echo "=========================================="
+        echo "Total resorts in database:"
+        sqlite3 ski_resorts.db "SELECT COUNT(*) FROM resorts"
+        echo ""
+        echo "Total snow data records:"
+        sqlite3 ski_resorts.db "SELECT COUNT(*) FROM snow_data"
+        echo ""
+        echo "Data collection dates:"
+        sqlite3 ski_resorts.db "SELECT DISTINCT date FROM snow_data ORDER BY date DESC LIMIT 5"
+      continue-on-error: true
+
+    - name: Upload database artifact
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ski-resorts-database
+        path: ski_resorts.db
+        retention-days: 30
+
+    - name: Upload CSV export
+      if: ${{ (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && hashFiles('latest_snow_data.csv') != '' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: snow-data-csv
+        path: latest_snow_data.csv
+        retention-days: 30
+
+    - name: Upload logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: scraper-logs
+        path: |
+          *.log
+        retention-days: 7
