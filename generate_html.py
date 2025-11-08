@@ -37,8 +37,8 @@ class HTMLGenerator:
             s.lifts_total,
             s.runs_open,
             s.runs_total,
-            s.temperature_c,
-            s.conditions,
+            s.temperature_base_c,
+            s.weather_condition,
             s.last_snowfall_date
         FROM snow_data s
         JOIN resorts r ON s.resort_id = r.id
@@ -149,7 +149,7 @@ class HTMLGenerator:
                 <td>{self._format_value(resort.get('snow_depth_base_cm'), ' cm')}</td>
                 <td>{self._format_value(resort.get('snow_depth_summit_cm'), ' cm')}</td>
                 <td>{self._format_lifts(resort.get('lifts_open'), resort.get('lifts_total'))}</td>
-                <td class="conditions">{resort.get('conditions', 'N/A')}</td>
+                <td class="conditions">{resort.get('weather_condition', 'N/A')}</td>
             </tr>
             """
             rows.append(row)
