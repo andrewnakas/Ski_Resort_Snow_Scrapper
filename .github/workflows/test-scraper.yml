@@ -65,18 +65,18 @@ jobs:
 
     - name: Initialize database
       run: |
-        echo "Initializing database..."
-        python collect_data.py --init
+        echo "Initializing database with 105+ resorts..."
+        python collect_onthesnow.py --init
 
     - name: Scrape snow data
       if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
       run: |
         echo "=========================================="
-        echo "Starting snow data collection"
+        echo "Starting snow data collection from OnTheSnow"
         echo "=========================================="
 
-        # Build the command based on inputs
-        CMD="python collect_data.py --collect"
+        # Build the command
+        CMD="python collect_onthesnow.py --collect"
 
         # Add countries filter if specified
         if [ -n "${{ github.event.inputs.countries }}" ]; then
@@ -84,13 +84,10 @@ jobs:
           CMD="$CMD --countries ${{ github.event.inputs.countries }}"
         fi
 
-        # Add resorts filter if specified
-        if [ -n "${{ github.event.inputs.resorts }}" ]; then
-          echo "Filtering by resorts: ${{ github.event.inputs.resorts }}"
-          IFS=',' read -ra RESORTS <<< "${{ github.event.inputs.resorts }}"
-          for resort in "${RESORTS[@]}"; do
-            CMD="$CMD --resorts \"$resort\""
-          done
+        # Add limit for test mode
+        if [ "${{ github.event.inputs.test_mode }}" == "true" ]; then
+          echo "Test mode: limiting to 10 resorts"
+          CMD="$CMD --limit 10"
         fi
 
         # Execute the scraping command
@@ -104,7 +101,7 @@ jobs:
         echo "=========================================="
         echo "Latest Snow Data"
         echo "=========================================="
-        python collect_data.py --show
+        python collect_onthesnow.py --show
       continue-on-error: true
 
     - name: Generate powder report
